@@ -21,6 +21,7 @@ from .serializers import SuperUserSerializer
 from rest_framework.exceptions import APIException
 from django.core import serializers
 from django.contrib.auth.models import User
+from django.shortcuts import render
 
 #Metodo para la prediccion de spam or ham.
 #Se tiene en cuenta la consulta de quota disponible.
@@ -77,18 +78,13 @@ class call_model(APIView):
 
 #Metodo para consultar la quota disponible.
 class quota_info(generics.ListAPIView):
-    serializer_class = QuotaSerializer
-
-    def get_queryset(self):
-        """
-        This view should return a list of all the purchases
-        for the currently authenticated user.
-        """
-#Obtengo el usuario que esta generando la consulta.
+    def get(self, request):
         user = self.request.user
-#Devuelvo el objeto Quota filtrado por el usuario que genera la consulta.
-#El serializer ya devuelve la informacion en el formato solicitado.
-        return Quota.objects.filter(user_id=user)
+        #Devuelvo el objeto Quota filtrado por el usuario que genera la consulta.
+        #El serializer ya devuelve la informacion en el formato solicitado.
+        query= Quota.objects.filter(user_id=user) 
+        query = query.values('disponibles', 'procesados')
+        return Response(query[0])
 
 #Metodo no solicitado. Es auxiliar para poder generar una quota a los usuarios.
 #Si no existe en la tabla de quota el id de usuario, se crea un nuevo registro, si no se actualiza el que ya existe.
@@ -111,24 +107,24 @@ class quotaagregate(APIView):
 
 #Metodo para visualizar el historico de los mails procesados
 class consultList(generics.ListAPIView):
-    serializer_class = EmailHistoricoserializer
-
     def get(self,request,param1):
-        #n =int(self.request.GET.get('n'))
         #Usuario que esta solicitando el historico
         user = self.request.user
         #Obtengo todos los mails procesados por el usuario que hace la peticion
         queryset = EmailHistorico.objects.filter(user_id=user)
+        queryset = queryset.values('text', 'result', 'created_at')
         if len(queryset) == 0:
             raise APIException("NoDataToDisplay")
         #Genero las cotas para luego filtrar los mails que visualizo.
-        last = int(len(queryset)+1)
-        first = int(last - param1 - 1)
-        queryset_rev = queryset[first:last]
-        response = serializers.serialize("json", queryset_rev)
-        return HttpResponse(response, content_type='application/json')
- #       return JsonResponse(serializers.serialize('json', queryset_rev), safe=False)
-        
+        if len(queryset) < param1:
+            return Response(queryset)
+        else:
+            last = int(len(queryset)+1)
+            first = int(last - param1 - 1)
+            queryset_rev = queryset[first:last]
+            return Response(queryset_rev)
+
+
 
 #Agrego esta view para streamlit
 class database(generics.ListAPIView):
