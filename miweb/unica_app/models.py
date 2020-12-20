@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 class Quota(models.Model):
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     procesados = models.IntegerField(default=0, editable=False)
-    disponibles = models.IntegerField()
+    disponible = models.IntegerField()
 
 
 class EmailHistorico(models.Model):

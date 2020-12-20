@@ -38,8 +38,8 @@ class call_model(APIView):
                 disponibles = 0
             else:
                 #Obtengo el valor de la quota disponible
-                instance = cond.values('disponibles')[0]
-                disponibles = instance['disponibles']
+                instance = cond.values('disponible')[0]
+                disponibles = instance['disponible']
                 #Obtengo el valor de los procesados
                 instance = cond.values('procesados')[0]
                 procesados = instance['procesados']
@@ -63,14 +63,14 @@ class call_model(APIView):
                 else:
                     result = 'SPAM'
                     # build response
-                response = {'result': result}
+                response = {'result': result, 'status' :'ok'}
                 eh = EmailHistorico.objects.create(text = f , user = request.user, result= result)
                 #Quito disponibles
-                disponibles = disponibles -1
+                disponible = disponibles -1
                 #Aumento los procesados
                 procesados = procesados +1
                 #Hago el update del registro de quota
-                Quota.objects.filter(user_id=user_id).update(disponibles = disponibles, procesados = procesados)
+                Quota.objects.filter(user_id=user_id).update(disponible = disponible, procesados = procesados)
                 #Rama false del if, si no queda quota disponible, arrojo la respuesta de que no le queda quota
             else:
                 response = {'status':"fail",'message':'No quota left'}
@@ -83,7 +83,7 @@ class quota_info(generics.ListAPIView):
         #Devuelvo el objeto Quota filtrado por el usuario que genera la consulta.
         #El serializer ya devuelve la informacion en el formato solicitado.
         query= Quota.objects.filter(user_id=user) 
-        query = query.values('disponibles', 'procesados')
+        query = query.values('disponible', 'procesados')
         return Response(query[0])
 
 #Metodo no solicitado. Es auxiliar para poder generar una quota a los usuarios.
@@ -91,17 +91,17 @@ class quota_info(generics.ListAPIView):
 class quotaagregate(APIView):
     def post(self,request):
 #Obtengo la cantidad de quota que se le quiere agregar o crear al usuario
-            disponibles = request.data.get("disponibles")
+            disponibles = request.data.get("disponible")
 #Obtengo el user_id del usuario al que le quiero agregar o crear la quota
             user_id = request.data.get("user_id")
 #Me fijo si el usuario ya tiene un registro en la tabla de quota
             response = Quota.objects.filter(user_id=user_id)
             if len(response) == 0:
 #Si no tiene registro, entonces lo creo
-                qr = Quota.objects.create(user_id=user_id, disponibles = disponibles)
+                qr = Quota.objects.create(user_id=user_id, disponible = disponibles)
             else:
 #Si tiene registro, entonces lo actualizo
-                Quota.objects.filter(user_id=user_id).update(disponibles = disponibles)
+                Quota.objects.filter(user_id=user_id).update(disponible = disponibles)
             return Response()
 
 
