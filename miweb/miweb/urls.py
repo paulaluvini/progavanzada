@@ -38,6 +38,6 @@ urlpatterns = [
             path('api-token-auth/', obtain_jwt_token),
             path('test_if_logged',test_if_logged.as_view()),
             re_path(r'process_email',call_model.as_view()),
-            path('history/', consultList.as_view()),
+            path('history/<int:param1>/', consultList.as_view()),
             path('query/', database.as_view())
             ]

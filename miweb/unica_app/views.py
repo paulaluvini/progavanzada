@@ -17,7 +17,9 @@ from .serializers import EmailHistoricoserializer
 from rest_framework import generics
 from .models import Quota
 from .serializers import QuotaSerializer
-
+from .serializers import SuperUserSerializer
+from rest_framework.exceptions import APIException
+from django.core import serializers
 
 #Metodo para la prediccion de spam or ham.
 #Se tiene en cuenta la consulta de quota disponible.
@@ -26,7 +28,7 @@ from .serializers import QuotaSerializer
 class call_model(APIView):
     serializer = QuotaSerializer
     def post(self,request):
-    #Obtengo el id de usuario, para filtrar la quota disponible y los procesados
+            #Obtengo el id de usuario, para filtrar la quota disponible y los procesados
             user_id = self.request.user
             #Obtengo el reg de quota filtrado por el usuario
             cond = Quota.objects.filter(user_id=user_id)
@@ -59,9 +61,8 @@ class call_model(APIView):
                 else:
                     result = 'SPAM'
                     # build response
-                    response = {'result': result}
-                    eh = EmailHistorico.objects.create(text = f , user = request.user, result= result)
-
+                response = {'result': result}
+                eh = EmailHistorico.objects.create(text = f , user = request.user, result= result)
                 #Quito disponibles
                 disponibles = disponibles -1
                 #Aumento los procesados
@@ -111,29 +112,36 @@ class quotaagregate(APIView):
 class consultList(generics.ListAPIView):
     serializer_class = EmailHistoricoserializer
 
-    def get_queryset(self):
-        """
-        This view should return a list of all the purchases
-        for the currently authenticated user.
-        """
-#Parametro que indica la cantidad de mails que quiero visualizar
-        n =int(self.request.GET.get('n'))
-#Usuario que esta solicitando el historico
+    def get(self,request,param1):
+        #n =int(self.request.GET.get('n'))
+        #Usuario que esta solicitando el historico
         user = self.request.user
-#Obtengo todos los mails procesados por el usuario que hace la peticion
+        #Obtengo todos los mails procesados por el usuario que hace la peticion
         queryset = EmailHistorico.objects.filter(user_id=user)
-#Genero las cotas para luego filtrar los mails que visualizo.
+        if len(queryset) == 0:
+            raise APIException("NoDataToDisplay")
+        #Genero las cotas para luego filtrar los mails que visualizo.
         last = int(len(queryset)+1)
-        first = int(last - n - 1)
+        first = int(last - param1 - 1)
         queryset_rev = queryset[first:last]
-        return queryset_rev
+        response = serializers.serialize("json", queryset_rev)
+        return HttpResponse(response, content_type='application/json')
+ #       return JsonResponse(serializers.serialize('json', queryset_rev), safe=False)
+        
 
 #Agrego esta view para streamlit
 class database(generics.ListAPIView):
     serializer_class = EmailHistoricoserializer
+    serializer_super = SuperUserSerializer
     def get_queryset(self):
-        queryset = EmailHistorico.objects.filter()
-        return queryset
+        user_id = self.request.user.is_superuser
+        if user_id == 1:
+            a = User.objects.filter(username=user_id)
+            queryset = EmailHistorico.objects.filter()
+            return queryset
+        else:
+            raise APIException("PermissionDenied")
+
 
 
 #Test
