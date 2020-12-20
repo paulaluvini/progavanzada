@@ -20,6 +20,7 @@ from .serializers import QuotaSerializer
 from .serializers import SuperUserSerializer
 from rest_framework.exceptions import APIException
 from django.core import serializers
+from django.contrib.auth.models import User
 
 #Metodo para la prediccion de spam or ham.
 #Se tiene en cuenta la consulta de quota disponible.
